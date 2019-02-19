@@ -7,7 +7,7 @@ open command prompt where gradlew.bat is located and type `gradlew.bat bootRun`<
 1) 	Install node.js (latest)<br/>
 2) 	Install project dependencies:<br/>
 open command prompt in \src\main\frontend\react-front and type `npm install`<br/>
-3) 	Start the project in development<br/>
+3) 	Start the project in development:<br/>
 open command prompt in \src\main\frontend\react-front and type `npm start`<br/>
 Node will start the application, the application should open in your browser or check the console<br/>
 
