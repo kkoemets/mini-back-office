@@ -46,14 +46,14 @@ public class CommandLineRunnerBean implements CommandLineRunner {
         int amountDummyTransactions = 401;
         //
         List<Customer> customers = createCustomers(amountDummyCustomers);
-        log.info(customers.size() + " dummy customers created");
+        log.info(customers.size() + " dummy Customers created");
         List<Account> accounts = createAccounts(amountDummyAccounts);
-        log.info(accounts.size() + " dummy transactionsAsSender created");
+        log.info(accounts.size() + " dummy Accounts created");
 
         addAccountsToCustomers(accounts, customers);
 
         List<Transaction> transactions = createDummyTransactions(amountDummyTransactions);
-        log.info(transactions.size() + " dummy transactionsAsSender created");
+        log.info(transactions.size() + " dummy Transactions created");
 
         addAccountsToTransactions(accounts, transactions);
 
