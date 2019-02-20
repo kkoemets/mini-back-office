@@ -76,7 +76,11 @@ public class TransactionController {
             throw new NumberFormatException("Client didn't send a valid number as an amount in " +
                     "Transaction" + json.get("amount"));
         }
+        sender.setBalance(sender.getBalance().subtract(BigDecimal.valueOf(amount)));
+        receiver.setBalance(receiver.getBalance().add(BigDecimal.valueOf(amount)));
         Transaction transaction = new Transaction(sender, receiver, new Date(), desc, amount);
+        accountService.save(sender);
+        accountService.save(receiver);
         log.info("New transaction created: " + transactionService.save(transaction).getId());
     }
 
