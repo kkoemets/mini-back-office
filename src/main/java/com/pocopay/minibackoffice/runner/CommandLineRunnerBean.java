@@ -81,7 +81,7 @@ public class CommandLineRunnerBean implements CommandLineRunner {
         for (long i = 1; i <= amount; i++) {
             String username;
             username = getUsername();
-            if (set.contains(username)) {
+            while (set.contains(username)) {
                 username = username + '1';
             }
             accounts.add(new Account(i, username, 500.));
