@@ -1,73 +1,92 @@
 import React, { Component } from 'react';
-import TransactionAsSenderTableRow from "./tables/TransactionAsSenderTableRow";
-import TransactionAsReceiverTableRow from "./tables/TransactionAsReceiverTableRow";
+import ReactTable from 'react-table';
 
 export default class AccountDetail extends Component {
+
     constructor(props) {
         super(props);
         this.state = {
-            transactionsAsSender: [],
-            transactionsAsReceiver: []
+            transactions: [],
+            account: ''
         };
     }
 
     async componentDidMount() {
-        console.log(this.props.match.params.id);
         const response = await fetch('/api/transaction/account/sender/' + this.props.match.params.id);
-        const body = await response.json();
-        this.setState({transactionsAsSender: body, isLoading: false});
-
-        console.log(this.props.match.params.id);
+        const asSender = await response.json();
+        this.state.account = asSender[0].senderAccount.name;
         const response1 = await fetch('/api/transaction/account/receiver/' + this.props.match.params.id);
-        const body1 = await response1.json();
-        this.setState({transactionsAsReceiver: body1, isLoading: false});
+        const asReceiver = await response1.json();
+        const sum = asSender.concat(asReceiver);
+        this.setState({transactions: sum, isLoading: false});
     }
 
-    tableRowSender() {
-        return this.state.transactionsAsSender.map(function(object, i) {
-            return <TransactionAsSenderTableRow trans={object} key={i}/>;
-        });
-    }
-
-    tableRowReceiver() {
-        return this.state.transactionsAsReceiver.map(function(object, i) {
-            return <TransactionAsReceiverTableRow trans={object} key={i}/>;
-        });
+    filterMethod = (filter, row, column) => {
+        const id = filter.pivotId || filter.id;
+        return row[id] !== undefined ? String(row[id].toLowerCase()).startsWith(filter.value.toLowerCase()) : true
     }
 
     render() {
+        const columns = [
+            {
+                Header: 'ID',
+                accessor: 'id',
+                id: 'id',
+                style: {
+                    textAlign: 'center'
+                },
+            },
+            {
+                Header: 'Description',
+                accessor: 'description',
+                style:{ 'whiteSpace': 'unset'
+                },
+                filterable: false,
+            },
+            {
+                Header: 'Amount',
+                accessor: 'amount',
+                style: {
+                    textAlign: 'center'
+                },
+                filterable: false,
+            },
+            {
+                Header: 'Transaction Date',
+                accessor: 'transactionDate',
+                style:{ 'whiteSpace': 'unset'
+                }
+            },
+            {
+                Header: 'Sender Account',
+                accessor: 'senderAccount.name',
+                style: {
+                    textAlign: 'center'
+                },
+            },
+            {
+                Header: 'Receiver Account',
+                accessor: 'receiverAccount.name',
+                style: {
+                    textAlign: 'center'
+                },
+            },
+        ];
+
         return (
             <div>
-                <h3 align="center">Transactions As Sender</h3>
-                <table className="table table-striped" style={{marginTop: 20}}>
-                    <thead>
-                    <tr>
-                        <th>Id</th>
-                        <th>Description</th>
-                        <th>Amount</th>
-                        <th>Sender</th>
-                        <th>Receiver</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {this.tableRowSender()}
-                    </tbody>
-                </table>
-                <h3 align="center">Transactions As Receiver</h3>
-                <table className="table table-striped" style={{marginTop: 20}}>
-                    <thead>
-                    <tr>
-                        <th>Id</th>
-                        <th>Description</th>
-                        <th>Amount</th>
-                        <th>Sender</th>
-                        <th>Receiver</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {this.tableRowReceiver()}
-                    </tbody>
-                </table>
+                <h3 align="center">Transaction list for account: {this.state.account}</h3>
+                <ReactTable
+                    columns = {columns}
+                    data = {this.state.transactions}
+                    filterable
+                    defaultFilterMethod={this.filterMethod}
+                    defaultPageSize={10}
+                    noDataText={'Loading transactions, please wait...'}
+                    showPaginationTop
+                    showPaginationBottom={false}
+                    className="-striped -highlight"
+                />
             </div>
         )
     }

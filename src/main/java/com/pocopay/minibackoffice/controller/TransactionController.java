@@ -8,6 +8,9 @@ import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -53,36 +56,42 @@ public class TransactionController {
         return transactionService.getByReceiverAccountId(id);
     }
 
-    //TODO!! wrong, needs needs to send a validation if a transaction was successful
     @ApiOperation(value = "Creates a transaction between two accounts")
     @CrossOrigin //TODO!! https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
     @PostMapping(value = "/create")
-    public void createTransaction(@RequestBody Map<String, String> json) {
+    public ResponseEntity<String> createTransaction(@RequestBody Map<String, String> json) {
         // check if client sends correct json
-        String[] validKeys = {"senderAccountName", "receiverAccountName", "amount",
-                "description"};
-        if (!isValidNewTransactionJson(json, validKeys)) {
-            throw new IllegalArgumentException("Wrong JSON format for creating a new Transaction");
-        }
-        //
-        Account sender = getAccount(json, "senderAccountName");
-        Account receiver = getAccount(json, "receiverAccountName");
-        String desc = json.get("description");
-        //
-        double amount;
+        Transaction transaction;
         try {
-            amount = Double.valueOf(json.get("amount"));
-            if (!isValidAmount(amount)) throw new NumberFormatException();
-        } catch (NumberFormatException e) {
-            throw new NumberFormatException("Client didn't send a valid number as an amount in " +
-                    "Transaction" + json.get("amount"));
+            String[] validKeys = {"senderAccountName", "receiverAccountName", "amount",
+                    "description"};
+            if (!isValidNewTransactionJson(json, validKeys)) {
+                throw new IllegalArgumentException("Wrong JSON format for creating a new Transaction");
+            }
+            //
+            Account sender = getAccount(json, "senderAccountName");
+            Account receiver = getAccount(json, "receiverAccountName");
+            String desc = json.get("description");
+            //
+            double amount;
+            try {
+                amount = Double.valueOf(json.get("amount"));
+                if (!isValidAmount(amount)) throw new NumberFormatException();
+            } catch (NumberFormatException e) {
+                throw new NumberFormatException("Client didn't send a valid number as an amount in " +
+                        "Transaction" + json.get("amount"));
+            }
+            sender.setBalance(sender.getBalance().subtract(BigDecimal.valueOf(amount)));
+            receiver.setBalance(receiver.getBalance().add(BigDecimal.valueOf(amount)));
+            transaction = new Transaction(sender, receiver, new Date(), desc, amount);
+            accountService.save(sender);
+            accountService.save(receiver);
+            log.info("New transaction created: " + transactionService.save(transaction).getId());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
-        sender.setBalance(sender.getBalance().subtract(BigDecimal.valueOf(amount)));
-        receiver.setBalance(receiver.getBalance().add(BigDecimal.valueOf(amount)));
-        Transaction transaction = new Transaction(sender, receiver, new Date(), desc, amount);
-        accountService.save(sender);
-        accountService.save(receiver);
-        log.info("New transaction created: " + transactionService.save(transaction).getId());
+        return ResponseEntity.status(HttpStatus.OK).body("ID#" +
+                transaction.getId());
     }
 
     private boolean isValidAmount(double amount) throws NumberFormatException {

@@ -1,5 +1,6 @@
 package com.pocopay.minibackoffice.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
@@ -17,19 +18,19 @@ public class Transaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss.SSSZ",
+            locale = "en_GB", timezone = "GMT+2")
     private Date transactionDate;
 
     private String description;
 
     private BigDecimal amount;
 
-    //    @JsonIgnore
     @ManyToOne
     @NotFound(action = NotFoundAction.IGNORE)
     @JoinColumn
     private Account senderAccount;
 
-    //    @JsonIgnore
     @ManyToOne
     @NotFound(action = NotFoundAction.IGNORE)
     @JoinColumn
@@ -48,7 +49,7 @@ public class Transaction {
         this.transactionDate = transactionDate;
     }
 
-    // for creating dummy transactionsAsSender
+    // for creating dummy transactions
     public Transaction(Long id, Account senderAccount, Account receiverAccount, Date transactionDate,
                        String description, double amount) {
         this(senderAccount, receiverAccount, transactionDate, description, amount);

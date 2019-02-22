@@ -1,13 +1,8 @@
-// create.component.js
-
 import React, { Component } from 'react';
 import Autosuggest from 'react-autosuggest';
 
 // wait for fetch, just initialize array
-var accounts = {
-    name: 'dummy',
-    year: 0
-};
+var accounts = [];
 
 // https://developer.mozilla.org/en/docs/Web/JavaScript/Guide/Regular_Expressions#Using_Special_Characters
 function escapeRegexCharacters(str) {
@@ -45,7 +40,9 @@ export default class TransactionCreate extends Component {
             senderAccountName: '',
             receiverAccountName: '',
             amount:'',
-            description:''
+            description:'',
+            response: '',
+            responseColor: '',
         }
     }
 
@@ -53,7 +50,6 @@ export default class TransactionCreate extends Component {
         const response = await fetch('/api/account');
         const body = await response.json();
         accounts = await body.filter(account => (account.name));
-        await console.log(accounts)
     }
 
     onNameChange = (event, { newValue }) => {
@@ -107,7 +103,7 @@ export default class TransactionCreate extends Component {
         })
     }
 
-    onSubmit(e) {
+    async onSubmit(e) {
         e.preventDefault();
         var obj = {
             senderAccountName: this.state.senderAccountName,
@@ -116,13 +112,15 @@ export default class TransactionCreate extends Component {
             description: this.state.description
         };
 
-        console.log(obj);
-
-        fetch('http://localhost:8080/api/transaction/create', {
+        const response = await fetch('http://localhost:8080/api/transaction/create', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(obj)
         });
+
+        await this.parseResponse(response);
+
+        this.componentDidMount();
 
         this.setState({
             senderAccountName: '',
@@ -130,6 +128,17 @@ export default class TransactionCreate extends Component {
             amount: '',
             description: ''
         })
+    }
+
+    async parseResponse(response) {
+        const info = await response.text();
+        if (response.ok) {
+            this.state.response = 'Transaction was successful! ' + info;
+            this.state.responseColor = 'green'
+        } else {
+            this.state.response = 'Transaction was NOT successful! ' + info;
+            this.state.responseColor = 'red'
+        }
     }
 
     render() {
@@ -207,6 +216,7 @@ export default class TransactionCreate extends Component {
                         <input type="submit" value="Create a Transaction"
                                className="btn btn-primary"/>
                     </div>
+                    <p style={{ color: this.state.responseColor }}>{this.state.response}</p>
                 </form>
             </div>
         )

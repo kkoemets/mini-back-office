@@ -20,13 +20,12 @@ public class Account {
     @GeneratedValue (strategy = GenerationType.IDENTITY)
     private Long id;
 
-//    @Column(unique = true)
+    @Column(unique = true)
     @Size(max = 50)
     private String name;
 
     private BigDecimal balance;
 
-    @JsonIgnore
     @ManyToOne
     // https://www.concretepage.com/hibernate/example-notfound-hibernate
     @NotFound(action = NotFoundAction.IGNORE)
@@ -45,7 +44,7 @@ public class Account {
     public Account() {
     }
 
-    // for creating dummy transactionsAsSender
+    // for creating dummy transactions
     public Account(Long id, @Size(max = 50) String name, Double balance) {
         this.id = id;
         this.name = name;
