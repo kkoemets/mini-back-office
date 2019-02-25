@@ -47,13 +47,13 @@ public class TransactionController {
     @ApiOperation(value = "Returns transactions as a list by sender's account ID")
     @GetMapping(value = "/account/sender/{id}")
     public Iterable<Transaction> getTransactionBySenderAccountId(@PathVariable long id) {
-        return transactionService.getBySenderAccountId(id);
+        return accountService.findById(id).getTransactionsAsSender();
     }
 
     @ApiOperation(value = "Returns transactions as a list by receiver's account ID")
     @GetMapping(value = "/account/receiver/{id}")
     public Iterable<Transaction> getTransactionByReceiverAccountId(@PathVariable long id) {
-        return transactionService.getByReceiverAccountId(id);
+        return accountService.findById(id).getTransactionsAsReceiver();
     }
 
     @ApiOperation(value = "Creates a transaction between two accounts")
@@ -84,9 +84,12 @@ public class TransactionController {
             sender.setBalance(sender.getBalance().subtract(BigDecimal.valueOf(amount)));
             receiver.setBalance(receiver.getBalance().add(BigDecimal.valueOf(amount)));
             transaction = new Transaction(sender, receiver, new Date(), desc, amount);
+            transaction = transactionService.save(transaction);
+            sender.addTransactionAsSender(transaction);
+            receiver.addTransactionAsReceiver(transaction);
+            log.info("New transaction created: " + transaction.getId());
             accountService.save(sender);
             accountService.save(receiver);
-            log.info("New transaction created: " + transactionService.save(transaction).getId());
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
