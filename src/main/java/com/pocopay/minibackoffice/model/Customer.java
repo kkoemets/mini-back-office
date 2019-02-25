@@ -16,7 +16,7 @@ import java.util.Set;
 public class Customer {
 
     @Id
-    @GeneratedValue (strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NotNull
@@ -34,6 +34,7 @@ public class Customer {
     private String email;
 
     @NotNull
+    @Column(unique = true)
     @Size(max = 20)
     private String phone;
 
@@ -46,11 +47,7 @@ public class Customer {
     }
 
     // for creating dummy customers
-    public Customer(Long id, @NotNull @Size(max = 65) String firstName,
-                    @NotNull @Size(max = 65) String lastName,
-                    @NotNull @Email @Size(max = 100) String email,
-                    @NotNull @Size(max = 20) String phone) {
-        this.id = id;
+    public Customer(String firstName, String lastName, String email, String phone) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;

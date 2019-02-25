@@ -1,6 +1,7 @@
 package com.pocopay.minibackoffice.runner;
 
 import com.github.javafaker.Faker;
+import com.google.common.collect.Lists;
 import com.pocopay.minibackoffice.model.Account;
 import com.pocopay.minibackoffice.model.Customer;
 import com.pocopay.minibackoffice.model.Transaction;
@@ -41,25 +42,26 @@ public class CommandLineRunnerBean implements CommandLineRunner {
         // Activation - TRUE/FALSE
         if (false) return;
         // Configure
-        int amountDummyCustomers = 24;
-        int amountDummyAccounts = 98;
-        int amountDummyTransactions = 401;
+        int amountDummyCustomers = 68;
+        int amountDummyAccounts = 256;
+        int amountDummyTransactions = 1236;
         //
         List<Customer> customers = createCustomers(amountDummyCustomers);
+        customers = Lists.newArrayList(customerService.saveAll(customers));
         log.info(customers.size() + " dummy customers created");
+
         List<Account> accounts = createAccounts(amountDummyAccounts);
+        addAccountsToCustomers(accounts, customers);
+        accounts = Lists.newArrayList(accountService.saveAll(accounts));
         log.info(accounts.size() + " dummy accounts created");
 
-        addAccountsToCustomers(accounts, customers);
-
         List<Transaction> transactions = createDummyTransactions(amountDummyTransactions);
+        addAccountsToTransactions(accounts, transactions);
+        transactionService.saveAll(transactions);
+        accountService.saveAll(accounts);   // update accounts in DB, specifically balance after
+        // transactions
         log.info(transactions.size() + " dummy transactions created");
 
-        addAccountsToTransactions(accounts, transactions);
-
-        transactionService.saveAll(transactions);
-        accountService.saveAll(accounts);
-        customerService.saveAll(customers);
     }
 
     private List<Customer> createCustomers(int amount) {
@@ -69,7 +71,7 @@ public class CommandLineRunnerBean implements CommandLineRunner {
             String lastName = faker.name().lastName();
             String email = firstName + "." + lastName + "@mail.com";
             String phone = faker.phoneNumber().cellPhone();
-            Customer dummyCustomer = new Customer(i, firstName, lastName, email, phone);
+            Customer dummyCustomer = new Customer(firstName, lastName, email, phone);
             customers.add(dummyCustomer);
         }
         return customers;
@@ -84,14 +86,14 @@ public class CommandLineRunnerBean implements CommandLineRunner {
             while (set.contains(username)) {
                 username = username + '1';
             }
-            accounts.add(new Account(i, username, 500.));
+            accounts.add(new Account(username, 500.));
             set.add(username);
         }
         return accounts;
     }
 
     private String getUsername() {
-        switch (random.nextInt(5)){
+        switch (random.nextInt(5)) {
             case 0:
                 return faker.gameOfThrones().character();
             case 1:
@@ -120,8 +122,7 @@ public class CommandLineRunnerBean implements CommandLineRunner {
 
             Date date = new Date(System.currentTimeMillis() - random.nextInt(432000000));
 
-            Transaction transaction = new Transaction(
-                    id, null, null, date
+            Transaction transaction = new Transaction(null, null, date
                     , faker.lorem().sentence(3), 0.
             );
             transactions.add(transaction);

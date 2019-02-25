@@ -2,10 +2,10 @@ package com.pocopay.minibackoffice.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
-import org.hibernate.annotations.NotFound;
-import org.hibernate.annotations.NotFoundAction;
+import lombok.ToString;
 
 import javax.persistence.*;
+import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -17,23 +17,24 @@ import java.util.Set;
 public class Account {
 
     @Id
-    @GeneratedValue (strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(unique = true)
+    @NotNull
     @Size(max = 50)
     private String name;
 
+    @NotNull
     private BigDecimal balance;
 
+    @ToString.Exclude
     @ManyToOne
-    // https://www.concretepage.com/hibernate/example-notfound-hibernate
-    @NotFound(action = NotFoundAction.IGNORE)
+    @NotNull
     @JoinColumn
     private Customer customer;
 
     @JsonIgnore
-    // https://stackoverflow.com/questions/2990799/difference-between-fetchtype-lazy-and-eager-in-java-persistence-api
     @OneToMany(mappedBy = "senderAccount", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Set<Transaction> transactionsAsSender;
 
@@ -45,10 +46,10 @@ public class Account {
     }
 
     // for creating dummy transactions
-    public Account(Long id, @Size(max = 50) String name, Double balance) {
-        this.id = id;
+    public Account(String name, Double balance) {
         this.name = name;
         this.balance = BigDecimal.valueOf(balance).setScale(2, RoundingMode.HALF_EVEN);
+        this.customer = null;
         this.transactionsAsSender = new LinkedHashSet<>();
         this.transactionsAsReceiver = new LinkedHashSet<>();
     }
@@ -60,20 +61,20 @@ public class Account {
 
         Account account = (Account) o;
 
-        if (!id.equals(account.id)) return false;
-        return name.equals(account.name);
+        return name != null ? name.equals(account.name) : account.name == null;
     }
 
+    // https://stackoverflow.com/questions/48324474/cascading-entity-save-with-composite-key-throws-nullpointerexception
+    // https://vladmihalcea.com/how-to-implement-equals-and-hashcode-using-the-jpa-entity-identifier/
     @Override
     public int hashCode() {
-        int result = id.hashCode();
-        result = 31 * result + name.hashCode();
-        return result;
+        return name != null ? name.hashCode() : 0;
     }
 
     public void addTransactionAsSender(Transaction transaction) {
         transactionsAsSender.add(transaction);
     }
+
     public void addTransactionAsReceiver(Transaction transaction) {
         transactionsAsReceiver.add(transaction);
     }
