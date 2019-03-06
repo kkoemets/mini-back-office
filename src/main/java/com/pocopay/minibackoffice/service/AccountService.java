@@ -3,6 +3,7 @@ package com.pocopay.minibackoffice.service;
 import com.pocopay.minibackoffice.model.Account;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface AccountService {
 
@@ -10,11 +11,11 @@ public interface AccountService {
 
     Account save(Account account);
 
-    Account findById(long id);
+    Optional<Account> findById(long id);
 
     Iterable<Account> saveAll(List<Account> accounts);
 
-    Iterable<Account> findByCustomerId(long id);
+    Optional<Iterable<Account>> findByCustomerId(long id);
 
-    Account findAccountByName(String name);
+    Optional<Account> findAccountByName(String name);
 }

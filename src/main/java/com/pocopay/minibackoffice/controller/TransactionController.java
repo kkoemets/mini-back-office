@@ -7,15 +7,12 @@ import com.pocopay.minibackoffice.service.TransactionService;
 import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-import java.util.Date;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/transaction")
@@ -25,11 +22,15 @@ public class TransactionController {
 
     private TransactionService transactionService;
 
-    @Autowired
     private AccountService accountService;
 
-    public TransactionController(TransactionService transactionService) {
+    private final Set<String> validKeys = new HashSet<>(Arrays.asList("senderAccountName", "receiverAccountName",
+            "amount", "description"));
+
+    public TransactionController(TransactionService transactionService,
+                                 AccountService accountService) {
         this.transactionService = transactionService;
+        this.accountService = accountService;
     }
 
     @ApiOperation(value = "Returns all transactions as a list")
@@ -41,80 +42,127 @@ public class TransactionController {
     @ApiOperation(value = "Returns a transaction by ID")
     @GetMapping(value = "/{id}")
     public Transaction getTransaction(@PathVariable long id) {
-        return transactionService.getById(id);
+        Optional<Transaction> optionalTransaction = transactionService.getById(id);
+
+        return optionalTransaction.orElse(new Transaction());
     }
 
     @ApiOperation(value = "Returns transactions as a list by sender's account ID")
     @GetMapping(value = "/account/sender/{id}")
     public Iterable<Transaction> getTransactionBySenderAccountId(@PathVariable long id) {
-        return accountService.findById(id).getTransactionsAsSender();
+        Optional<Account> optionalAccount = accountService.findById(id);
+
+        return optionalAccount
+                .map(Account::getTransactionsAsSender)
+                .orElse(new HashSet<>());
     }
 
     @ApiOperation(value = "Returns transactions as a list by receiver's account ID")
     @GetMapping(value = "/account/receiver/{id}")
     public Iterable<Transaction> getTransactionByReceiverAccountId(@PathVariable long id) {
-        return accountService.findById(id).getTransactionsAsReceiver();
+        Optional<Account> optionalAccount = accountService.findById(id);
+
+        return optionalAccount
+                .map(Account::getTransactionsAsReceiver)
+                .orElse(new HashSet<>());
     }
 
     @ApiOperation(value = "Creates a transaction between two accounts")
-    @CrossOrigin //TODO!! https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
+    @CrossOrigin
     @PostMapping(value = "/create")
     public ResponseEntity<String> createTransaction(@RequestBody Map<String, String> json) {
-        // check if client sends correct json
+        long requestId = transactionService.getLastTransactionsId() + 1;
+        log.info("Request from client to create a new transaction ID#" + requestId);
         Transaction transaction;
         try {
-            String[] validKeys = {"senderAccountName", "receiverAccountName", "amount",
-                    "description"};
-            if (!isValidNewTransactionJson(json, validKeys)) {
-                throw new IllegalArgumentException("Wrong JSON format for creating a new Transaction");
+            if (json == null) {
+                throw new IllegalArgumentException("Received JSON that was null");
             }
-            //
-            Account sender = getAccount(json, "senderAccountName");
-            Account receiver = getAccount(json, "receiverAccountName");
-            String desc = json.get("description");
-            //
-            double amount;
-            try {
-                amount = Double.valueOf(json.get("amount"));
-                if (!isValidAmount(amount)) throw new NumberFormatException();
-            } catch (NumberFormatException e) {
-                throw new NumberFormatException("Client didn't send a valid number as an amount in " +
-                        "Transaction" + json.get("amount"));
+
+            final Map<String, String> request = json;
+            if (!hasRequestValidKeys(request)) {
+                throw new IllegalArgumentException("Invalid keys set in JSON");
             }
-            sender.setBalance(sender.getBalance().subtract(BigDecimal.valueOf(amount)));
-            receiver.setBalance(receiver.getBalance().add(BigDecimal.valueOf(amount)));
-            transaction = new Transaction(sender, receiver, new Date(), desc, amount);
-            transaction = transactionService.save(transaction);
-            sender.addTransactionAsSender(transaction);
-            receiver.addTransactionAsReceiver(transaction);
-            log.info("New transaction created: " + transaction.getId());
-            accountService.save(sender);
-            accountService.save(receiver);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+
+            final String requestedSenderAccountName = request.get("senderAccountName");
+            final String requestedReceiverAccountName = request.get("receiverAccountName");
+            final String requestedAmount = request.get("amount");
+            final String requestedDesc = request.get("description");
+
+            final Account senderAccount = getAccountByName(requestedSenderAccountName);
+
+            final Account receiverAccount = getAccountByName(requestedReceiverAccountName);
+
+            if (requestedDesc.isEmpty()) {
+                throw new IllegalArgumentException("Received JSON has empty description value");
+            }
+
+            final BigDecimal amount = new BigDecimal(requestedAmount);
+
+            if (isNegative(amount)) {
+                throw new IllegalArgumentException("Amount cannot be negative");
+            }
+
+            exchangeAmountBetweenAccounts(senderAccount, receiverAccount, amount);
+
+            log.info("Creating transaction ID#" + requestId +": " + senderAccount.getName() + "[id:" +
+                    senderAccount.getId() + "] -> " + receiverAccount.getName() + "[id:" +
+                    receiverAccount.getId() + "] [Amount: " + amount.toPlainString() +
+                    "] [Description: " + requestedDesc + "]");
+
+            Transaction newTransaction = new Transaction(senderAccount, receiverAccount,
+                    new Date(), requestedDesc, amount.doubleValue());
+
+            transaction = transactionService.save(newTransaction);
+
+            addTransactionToAccounts(transaction, senderAccount, receiverAccount);
+
+            log.info("New transaction created: ID#" + transaction.getId());
+
+            accountService.save(senderAccount);
+            accountService.save(receiverAccount);
+        } catch (Exception e) {
+            String msg;
+            if (e instanceof IllegalArgumentException || e instanceof NumberFormatException) {
+                msg = e.getMessage();
+            } else {
+                msg = "Something went wrong on the server side!";
+            }
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(msg);
         }
-        return ResponseEntity.status(HttpStatus.OK).body("ID#" +
-                transaction.getId());
+        return ResponseEntity.status(HttpStatus.OK).body("ID#" + transaction.getId());
     }
 
-    private boolean isValidAmount(double amount) throws NumberFormatException {
-        return (amount > 0);
+    private Account getAccountByName(String requestedSenderAccountName)
+            throws IllegalArgumentException {
+        return accountService
+                .findAccountByName(requestedSenderAccountName)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Account '" + requestedSenderAccountName + "' does not exist"));
     }
 
-    private Account getAccount(Map<String, String> json, String key) throws IllegalArgumentException {
-        String name = json.get(key);
-        Account sender = accountService.findAccountByName(name);
-        if (sender == null) throw new IllegalArgumentException("Account with name '" +
-                name + "' does not exist!");
-        return sender;
+    private void addTransactionToAccounts(Transaction transaction, Account senderAccount, Account receiverAccount) {
+        senderAccount.addTransactionAsSender(transaction);
+        receiverAccount.addTransactionAsReceiver(transaction);
     }
 
-    private boolean isValidNewTransactionJson(Map<String, String> json, String[] validKeys) {
-        if (json.size() != validKeys.length) return false;
+    private void exchangeAmountBetweenAccounts(Account senderAccount, Account receiverAccount, BigDecimal amount) {
+        senderAccount.decreaseBalance(amount);
+        receiverAccount.increaseBalance(amount);
+    }
 
-        for (String key : validKeys) {
-            if (!json.containsKey(key)) return false;
+    private boolean isNegative(BigDecimal amount) {
+        return amount.doubleValue() < 0;
+    }
+
+    private boolean hasRequestValidKeys(Map<String, String> request) {
+        if (request == null) return false;
+
+        for (String key : request.keySet()) {
+            if (!validKeys.contains(key)) return false;
         }
+
         return true;
     }
+
 }

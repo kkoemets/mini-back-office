@@ -9,4 +9,5 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     Iterable<Transaction> findBySenderAccountId(long id);
 
+    Transaction findTopByOrderByIdDesc();
 }

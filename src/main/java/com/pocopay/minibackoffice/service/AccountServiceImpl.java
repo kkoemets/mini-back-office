@@ -29,9 +29,8 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public Account findById(long id) {
-        Optional<Account> result = accountRepository.findById(id);
-        return result.isPresent() ? result.get() : null;
+    public Optional<Account> findById(long id) {
+        return accountRepository.findById(id);
     }
 
     @Override
@@ -40,13 +39,13 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public Iterable<Account> findByCustomerId(long id) {
-        return accountRepository.findByCustomerId(id);
+    public Optional<Iterable<Account>> findByCustomerId(long id) {
+        return Optional.ofNullable(accountRepository.findByCustomerId(id));
     }
 
     @Override
-    public Account findAccountByName(String name) {
-        return accountRepository.findAccountByName(name);
+    public Optional<Account> findAccountByName(String name) {
+        return Optional.ofNullable(accountRepository.findAccountByName(name));
     }
 
 }

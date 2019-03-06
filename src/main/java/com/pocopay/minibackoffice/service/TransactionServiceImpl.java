@@ -29,9 +29,8 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public Transaction getById(long id) {
-        Optional<Transaction> result = transactionRepository.findById(id);
-        return result.isPresent() ? result.get() : null;
+    public Optional<Transaction> getById(long id) {
+        return transactionRepository.findById(id);
     }
 
     @Override
@@ -47,5 +46,10 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public Iterable<Transaction> getByReceiverAccountId(long id) {
         return transactionRepository.findByReceiverAccountId(id);
+    }
+
+    @Override
+    public Long getLastTransactionsId() {
+        return transactionRepository.findTopByOrderByIdDesc().getId();
     }
 }

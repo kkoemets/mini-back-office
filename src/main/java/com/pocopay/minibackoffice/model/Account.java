@@ -78,4 +78,12 @@ public class Account {
     public void addTransactionAsReceiver(Transaction transaction) {
         transactionsAsReceiver.add(transaction);
     }
+
+    public void increaseBalance(BigDecimal amount) {
+        balance = balance.add(amount);
+    }
+
+    public void decreaseBalance(BigDecimal amount) {
+        balance = balance.subtract(amount);
+    }
 }

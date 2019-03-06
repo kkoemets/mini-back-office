@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
-import ReactTable from 'react-table';
+
+import TransactionsTable from "./tables/transactions.table.component";
 
 export default class AccountDetail extends Component {
 
@@ -21,72 +22,11 @@ export default class AccountDetail extends Component {
         this.setState({transactions: sum, isLoading: false});
     }
 
-    filterMethod = (filter, row, column) => {
-        const id = filter.pivotId || filter.id;
-        return row[id] !== undefined ? String(row[id].toLowerCase()).startsWith(filter.value.toLowerCase()) : true
-    }
-
     render() {
-        const columns = [
-            {
-                Header: 'ID',
-                accessor: 'id',
-                id: 'id',
-                style: {
-                    textAlign: 'center'
-                },
-            },
-            {
-                Header: 'Description',
-                accessor: 'description',
-                style:{ 'whiteSpace': 'unset'
-                },
-                filterable: false,
-            },
-            {
-                Header: 'Amount',
-                accessor: 'amount',
-                style: {
-                    textAlign: 'center'
-                },
-                filterable: false,
-            },
-            {
-                Header: 'Transaction Date',
-                accessor: 'transactionDate',
-                style:{ 'whiteSpace': 'unset'
-                }
-            },
-            {
-                Header: 'Sender Account',
-                accessor: 'senderAccount.name',
-                style: {
-                    textAlign: 'center'
-                },
-            },
-            {
-                Header: 'Receiver Account',
-                accessor: 'receiverAccount.name',
-                style: {
-                    textAlign: 'center'
-                },
-            },
-        ];
-
         return (
             <div>
-                <h3 align="center">Transaction list for account: {this.state.account}</h3>
-                <ReactTable
-                    columns = {columns}
-                    data = {this.state.transactions}
-                    filterable
-                    defaultFilterMethod={this.filterMethod}
-                    defaultPageSize={10}
-                    noDataText={'Loading transactions, please wait...'}
-                    showPaginationTop
-                    showPaginationBottom={false}
-                    className="-striped -highlight"
-                />
+                <h3 align="center">Transactions for account: {this.state.account}</h3>
+                <TransactionsTable transactions={this.state.transactions}/>
             </div>
         )
     }

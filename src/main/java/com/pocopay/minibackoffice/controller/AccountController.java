@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.HashSet;
 
 @RestController
 @RequestMapping("/api/account")
@@ -27,7 +28,8 @@ public class AccountController {
 
     @ApiOperation(value = "Returns all accounts by customer ID")
     @GetMapping("/customer/{id}")
-    public Iterable<Account> getAccountByCustomer(@PathVariable long id) {
-        return accountService.findByCustomerId(id);
+    public Iterable<Account> getAccountsByCustomer(@PathVariable long id) {
+        return accountService.findByCustomerId(id)
+                .orElse(new HashSet<>());
     }
 }

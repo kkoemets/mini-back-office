@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import Autosuggest from 'react-autosuggest';
 
 // wait for fetch, just initialize array
-var accounts = [];
+let accounts = [];
 
 // https://developer.mozilla.org/en/docs/Web/JavaScript/Guide/Regular_Expressions#Using_Special_Characters
 function escapeRegexCharacters(str) {
@@ -13,7 +13,7 @@ function escapeRegexCharacters(str) {
 function getSuggestions(value) {
     const escapedValue = escapeRegexCharacters(value.trim());
     const regex = new RegExp('^' + escapedValue, 'i');
-    return accounts.filter(account => regex.test(account.name) || regex.test(account.balance));
+    return accounts.filter(account => regex.test(account.name));
 }
 
 function getSuggestionName(suggestion) {
@@ -27,8 +27,8 @@ function renderSuggestion(suggestion) {
 }
 
 export default class TransactionCreate extends Component {
-    constructor() {
-        super();
+    constructor(props) {
+        super(props);
         this.onChangeSenderAccountId = this.onChangeSenderAccountId.bind(this);
         this.onChangeReceiverAccountId = this.onChangeReceiverAccountId.bind(this);
         this.onChangeAmount = this.onChangeAmount.bind(this);
@@ -43,6 +43,8 @@ export default class TransactionCreate extends Component {
             description:'',
             response: '',
             responseColor: '',
+
+            buttonUsable: true
         }
     }
 
@@ -104,8 +106,9 @@ export default class TransactionCreate extends Component {
     }
 
     async onSubmit(e) {
+        this.disableTransactionButton();
         e.preventDefault();
-        var obj = {
+        let obj = {
             senderAccountName: this.state.senderAccountName,
             receiverAccountName: this.state.receiverAccountName,
             amount: this.state.amount,
@@ -127,7 +130,8 @@ export default class TransactionCreate extends Component {
             receiverAccountName: '',
             amount: '',
             description: ''
-        })
+        });
+        this.enableTransactionButton();
     }
 
     async parseResponse(response) {
@@ -139,6 +143,14 @@ export default class TransactionCreate extends Component {
             this.state.response = 'Transaction was NOT successful! ' + info;
             this.state.responseColor = 'red'
         }
+    }
+
+    enableTransactionButton() {
+        this.transactionBtn.removeAttribute("disabled");
+    }
+
+    disableTransactionButton() {
+        this.transactionBtn.setAttribute("disabled", "disabled");
     }
 
     render() {
@@ -190,7 +202,7 @@ export default class TransactionCreate extends Component {
                     </div>
 
                     <div className="form-group">
-                        <label>Amount: </label>
+                        <label>Amount, EUR: </label>
                         <input type="number"
                                className="form-check"
                                min="0"
@@ -213,7 +225,7 @@ export default class TransactionCreate extends Component {
                         />
                     </div>
                     <div className="form-group">
-                        <input type="submit" value="Create a Transaction"
+                        <input ref={transactionBtn => {this.transactionBtn = transactionBtn}} type="submit" value="Create a Transaction"
                                className="btn btn-primary"/>
                     </div>
                     <p style={{ color: this.state.responseColor }}>{this.state.response}</p>

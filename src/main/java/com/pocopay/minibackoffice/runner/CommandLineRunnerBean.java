@@ -45,21 +45,24 @@ public class CommandLineRunnerBean implements CommandLineRunner {
         int amountDummyCustomers = 68;
         int amountDummyAccounts = 256;
         int amountDummyTransactions = 1236;
-        //
+
+        // Create customers and save in database
         List<Customer> customers = createCustomers(amountDummyCustomers);
         customers = Lists.newArrayList(customerService.saveAll(customers));
         log.info(customers.size() + " dummy customers created");
 
+        // Create account, connect with customers and save both in database
         List<Account> accounts = createAccounts(amountDummyAccounts);
         addAccountsToCustomers(accounts, customers);
         accounts = Lists.newArrayList(accountService.saveAll(accounts));
+        customerService.saveAll(customers);
         log.info(accounts.size() + " dummy accounts created");
 
+        // Create transactions, connect with accounts and save both in database
         List<Transaction> transactions = createDummyTransactions(amountDummyTransactions);
         addAccountsToTransactions(accounts, transactions);
         transactionService.saveAll(transactions);
-        accountService.saveAll(accounts);   // update accounts in DB, specifically balance after
-        // transactions
+        accountService.saveAll(accounts);    // update accounts in DB, specifically balance after
         log.info(transactions.size() + " dummy transactions created");
 
     }
@@ -118,13 +121,12 @@ public class CommandLineRunnerBean implements CommandLineRunner {
     private List<Transaction> createDummyTransactions(int amount) {
         List<Transaction> transactions = new ArrayList<>();
         for (long id = 1; id <= amount; id++) {
-
-
             Date date = new Date(System.currentTimeMillis() - random.nextInt(432000000));
 
             Transaction transaction = new Transaction(null, null, date
                     , faker.lorem().sentence(3), 0.
             );
+
             transactions.add(transaction);
         }
         return transactions;
@@ -134,8 +136,10 @@ public class CommandLineRunnerBean implements CommandLineRunner {
         for (Transaction transaction : transactions) {
             Account sender = accounts.get(random.nextInt(accounts.size()));
             Account receiver = accounts.get(random.nextInt(accounts.size()));
+
             transaction.setSenderAccount(sender);
             sender.addTransactionAsSender(transaction);
+
             transaction.setReceiverAccount(receiver);
             receiver.addTransactionAsReceiver(transaction);
 
